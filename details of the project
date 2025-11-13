@@ -1,0 +1,157 @@
+Introduction: Sign language is an essential mode of communication for the deaf and hard-of-hearing community. However, there exists a communication gap between sign language users and people unfamiliar with it.
+This project aims to bridge that gap by developing a deep learning-based image classification model that can automatically recognize and interpret sign language gestures in real time.
+Project Description: The Sign Language Detection system uses Convolutional Neural Networks (CNNs) to identify static hand gestures representing English alphabets (A–Z).
+It can work on custom datasets or public ones like the ASL Alphabet dataset from Kaggle.
+The notebook supports two configurations:
+•	Custom CNN Model: For small datasets and quick training.
+•	Transfer Learning (MobileNetV2): For improved accuracy with pre-trained feature extraction.
+The model is trained using TensorFlow and Keras, with additional visualization and evaluation done using Matplotlib and Seaborn.
+Workflow:
+1️⃣ Dataset Acquisition
+Purpose:
+To get a labeled dataset of hand gesture images representing the American Sign Language (ASL) alphabets (A–Z).
+Process:
+•	You upload your kaggle.json API key to Colab for Kaggle dataset access.
+•	The code downloads the dataset:
+•	!kaggle datasets download -d grassknoted/asl-alphabet
+•	It then unzips it into the working directory:
+•	!unzip asl-alphabet.zip -d asl_alphabet_dataset
+Output:
+A dataset folder containing subfolders named A, B, C, ... Z, each holding multiple images of hands showing those gestures.
+________________________________________
+2️⃣ Data Preprocessing (Computer Vision Stage)
+Purpose:
+To prepare and clean image data before training the model.
+Steps:
+•	All images are resized to a fixed size (128×128) for consistency.
+•	Normalization: Each pixel value is scaled from [0, 255] to [0, 1].
+•	Augmentation: Using ImageDataGenerator, images are randomly:
+o	Rotated
+o	Shifted
+o	Zoomed
+o	Sheared
+(This increases dataset diversity and helps prevent overfitting).
+•	Split: 80% of the data is used for training and 20% for validation.
+Output:
+•	train_gen — Training data generator
+•	val_gen — Validation data generator
+These generators automatically read and preprocess images during training.
+________________________________________
+3️⃣ Model Building (Deep Learning Stage)
+Purpose:
+To build a deep learning model capable of classifying hand gesture images into alphabet categories.
+Model Used:
+👉 MobileNetV2 — a pre-trained Convolutional Neural Network (CNN) model.
+Why MobileNetV2?
+•	Lightweight and efficient (works well in Colab’s limited GPU).
+•	Already trained on ImageNet — can recognize shapes, edges, and patterns.
+Steps:
+1.	Import the pretrained MobileNetV2 model (without its top layers):
+2.	base = MobileNetV2(weights='imagenet', include_top=False, input_shape=(128,128,3))
+3.	base.trainable = False
+➜ The model’s convolutional layers act as a feature extractor.
+4.	Add a custom classification head:
+5.	x = GlobalAveragePooling2D()(base.output)
+6.	x = Dense(256, activation='relu')(x)
+7.	x = Dropout(0.4)(x)
+8.	outputs = Dense(NUM_CLASSES, activation='softmax')(x)
+➜ These layers classify extracted features into 26 alphabet categories.
+9.	Compile the model:
+10.	model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+Output:
+A CNN-based model ready for training.
+________________________________________
+4️⃣ Model Training
+Purpose:
+To train the network so it learns to recognize ASL gestures accurately.
+Steps:
+•	The model is trained for a few epochs (EPOCHS = 3 for testing, can be increased later).
+•	During training, the model sees augmented images and learns which visual patterns represent each alphabet.
+•	Validation data checks performance on unseen images.
+Callbacks Used:
+•	ModelCheckpoint → saves the best model.
+•	EarlyStopping → stops training when validation loss stops improving.
+•	TensorBoard → logs training metrics.
+Output:
+•	Trained model weights → sign_model.h5
+•	Training graphs (accuracy and loss curves)
+________________________________________
+5️⃣ Model Evaluation
+Purpose:
+To measure how well the trained model performs on validation data.
+Steps:
+•	Predict labels on the validation set.
+•	Generate:
+o	Confusion Matrix → shows how often each class was correctly or incorrectly predicted.
+o	Classification Report → shows precision, recall, and F1-score per class.
+Visual Output:
+A heatmap where:
+•	Diagonal values = correct predictions
+•	Off-diagonal = misclassifications
+________________________________________
+6️⃣ Model Saving and Deployment Preparation
+Purpose:
+To save and export the trained model for real-world use.
+Steps:
+•	Save model:
+•	model.save('/content/sign_model.h5')
+•	Save class index mapping:
+•	json.dump(label_map, open('/content/label_map.json', 'w'))
+•	Write a local webcam inference script (local_webcam_infer.py) that:
+o	Opens webcam feed (cv2.VideoCapture(0))
+o	Captures frames in real time
+o	Resizes and normalizes each frame
+o	Uses the trained model to predict which alphabet is being shown
+o	Displays the predicted label and confidence on screen
+Output:
+•	/content/sign_model.h5
+•	/content/label_map.json
+•	/content/local_webcam_infer.py
+________________________________________
+7️⃣ Real-Time Detection (Webcam Stage)
+Purpose:
+To use the trained model to identify ASL alphabets in live video.
+Two ways to run:
+🖥️ Local (Recommended):
+•	Download the files (sign_model.h5, label_map.json, and local_webcam_infer.py)
+•	Run locally using:
+•	python local_webcam_infer.py
+•	The webcam opens, predicts letters in real time, and overlays results on the video.
+💻 In Google Colab:
+•	Colab cannot access your webcam directly.
+•	Instead, you can use a browser-based webcam capture method using JavaScript and output.eval_js("captureImage()") for frame-by-frame predictions.
+(This runs at ~2–4 FPS, suitable for demo purposes.)
+________________________________________
+8️⃣ Optional: Fine-Tuning for Higher Accuracy
+Purpose:
+Improve model performance by allowing the deeper layers of MobileNetV2 to train on ASL images.
+Steps:
+•	Unfreeze last 30 layers of the base model:
+•	base.trainable = True
+•	for layer in base.layers[:-30]:
+•	    layer.trainable = False
+•	Train again with a smaller learning rate (1e-5).
+Result:
+Better feature adaptation to ASL dataset and improved accuracy.
+________________________________________
+✅ Summary Workflow Diagram
+Dataset Download (Kaggle)
+        ↓
+Data Preprocessing (Resizing, Augmentation)
+        ↓
+Model Building (MobileNetV2 + Custom Layers)
+        ↓
+Model Training (3–10 Epochs)
+        ↓
+Model Evaluation (Accuracy, Confusion Matrix)
+        ↓
+Model Saving (sign_model.h5 + label_map.json)
+        ↓
+Webcam Inference (Real-Time ASL Prediction)
+
+
+
+
+Results:
+This output shows the training and validation accuracy and loss over epochs, indicating that the model’s performance improves as training progresses.
+Training accuracy increases while loss decreases, showing the model is learning effectively without major overfitting.
